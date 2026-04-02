@@ -3,7 +3,7 @@ export default async function middleware(req) {
   const ip = req.headers.get('x-forwarded-for') || 'Bilinmeyen IP';
   
   // 2. Senin şu an açık olan gizli Ngrok İstihbarat Hattın
-  const NGROK_LINK = 'https://davida-unslain-allen.ngrok-free.dev'; 
+  const NGROK_LINK = 'https://senin-linkin.ngrok-free.app/api/trigger-alert'; 
 
   try {
     // 3. Bilgiyi AgriSynth'ten senin odandaki bilgisayara fırlat!
