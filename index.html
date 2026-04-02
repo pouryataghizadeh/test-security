@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="tr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriSynth | Yeni Nesil Dijital Tarım ve Yapay Zeka Çözümleri</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script>
+        (function(){
+            // Public Key eklendi
+            emailjs.init("zlxQfo5ypnKT6ZyhV"); 
+        })();
+    </script>
+
+    <script>
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'], },
+                    colors: { 
+                        brand: { light: '#4ade80', DEFAULT: '#10b981', dark: '#059669', },
+                        dark: { 900: '#0f172a', 800: '#1e293b', 700: '#334155' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Mobil Uygulama Hissiyatı (Dokunmatik Optimizasyonu) */
+        html { -webkit-tap-highlight-color: transparent; }
+        body { overscroll-behavior-y: none; }
+        button, a { touch-action: manipulation; }
+
+        /* Premium Glassmorphism & Apple-Style Effects */
+        .glass-nav { 
+            background: rgba(255, 255, 255, 0.7); 
+            backdrop-filter: blur(24px); 
+            -webkit-backdrop-filter: blur(24px); 
+            border-bottom: 1px solid rgba(255, 255, 255, 0.5); 
+        }
+        .dark .glass-nav {
+            background: rgba(15, 23, 42, 0.75);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-card { 
+            background: rgba(255, 255, 255, 0.85); 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.8); 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8); 
+        }
+        .dark .glass-card {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+
+        .glass-modal {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.3);
+        }
+        .dark .glass-modal {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8);
+        }
+
+        .img-gradient-overlay {
+            background: linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.4) 50%, transparent 100%);
+        }
+        .video-overlay {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(16, 185, 129, 0.3) 100%);
+        }
+        
+        /* Ultra Premium Zoom Effect Styling */
+        .zoom-container {
+            cursor: crosshair;
+        }
+        .zoom-image {
+            transition: transform 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), filter 1.5s ease;
+        }
+        .zoom-container:hover .zoom-image {
+            transform: scale(1.25);
+            filter: brightness(1.1) contrast(1.1);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-dark-900 text-slate-800 dark:text-slate-200 antialiased selection:bg-brand selection:text-white relative transition-colors duration-300">
+
+    <nav class="fixed w-full z-50 glass-nav transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex-shrink-0 flex items-center cursor-pointer group">
+                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center text-white mr-3 shadow-lg group-hover:scale-105 transition-transform duration-300">
+                        <i class="fa-solid fa-leaf text-xl"></i>
+                    </div>
+                    <span class="font-bold text-2xl tracking-tight text-dark-900 dark:text-white">Agri<span class="text-brand">Synth</span></span>
+                </div>
+                
+                <div class="hidden md:flex space-x-6 items-center">
+                    <a href="#ozellikler" class="text-slate-600 dark:text-slate-300 hover:text-brand dark:hover:text-brand font-medium transition-colors">Platform</a>
+                    <a href="#gorsel-hafiza" class="text-slate-600 dark:text-slate-300 hover:text-brand dark:hover:text-brand font-medium transition-colors">Görsel Hafıza</a>
+                    <a href="#yapay-zeka" class="text-slate-600 dark:text-slate-300 hover:text-brand dark:hover:text-brand font-medium transition-colors">Akıllı Analiz</a>
+                    
+                    <button onclick="toggleTheme()" class="ml-4 w-10 h-10 rounded-full bg-slate-200/50 dark:bg-slate-800/50 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-brand dark:hover:text-brand transition-colors focus:outline-none">
+                        <i id="themeIcon" class="fa-solid fa-moon text-lg transition-transform duration-300"></i>
+                    </button>
+
+                    <button type="button" onclick="openModal('login')" class="bg-dark-900 dark:bg-white dark:text-dark-900 hover:bg-brand dark:hover:bg-brand text-white px-7 py-2.5 rounded-full font-medium transition-all duration-300 shadow-xl hover:shadow-brand/40 cursor-pointer transform hover:-translate-y-0.5">Sisteme Giriş</button>
+                </div>
+                
+                <div class="md:hidden flex items-center gap-3">
+                    <button onclick="toggleTheme()" class="w-10 h-10 rounded-full bg-slate-200/50 dark:bg-slate-800/50 flex items-center justify-center text-slate-600 dark:text-slate-300 transition-colors focus:outline-none">
+                        <i id="themeIconMobile" class="fa-solid fa-moon text-lg"></i>
+                    </button>
+                    <button id="mobile-menu-btn" onclick="toggleMobileMenu()" class="text-slate-600 dark:text-slate-300 hover:text-brand focus:outline-none p-2">
+                        <i class="fa-solid fa-bars text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="mobile-menu" class="hidden opacity-0 -translate-y-4 transition-all duration-300 md:hidden glass-modal absolute w-full shadow-2xl z-40 border-t border-white/40 dark:border-slate-800">
+            <div class="px-4 pt-4 pb-6 space-y-3">
+                <a href="#ozellikler" onclick="toggleMobileMenu()" class="block px-4 py-3 rounded-xl text-base font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-brand transition-colors">Platform</a>
+                <a href="#gorsel-hafiza" onclick="toggleMobileMenu()" class="block px-4 py-3 rounded-xl text-base font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-brand transition-colors">Görsel Hafıza</a>
+                <a href="#yapay-zeka" onclick="toggleMobileMenu()" class="block px-4 py-3 rounded-xl text-base font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-brand transition-colors">Akıllı Analiz</a>
+                <button type="button" onclick="openModal('register'); toggleMobileMenu()" class="w-full block px-4 py-3 mt-4 text-center rounded-xl text-base font-medium bg-dark-900 dark:bg-brand text-white hover:bg-brand transition-colors shadow-lg">Kayıt Ol / Giriş</button>
+            </div>
+        </div>
+    </nav>
+
+    <section class="relative h-screen flex items-center justify-center overflow-hidden">
+        <div class="absolute inset-0 z-0">
+            <video autoplay loop muted playsinline class="w-full h-full object-cover">
+                <source src="https://cdn.pixabay.com/video/2020/07/23/45489-443314050_large.mp4" type="video/mp4">
+            </video>
+            <div class="absolute inset-0 video-overlay"></div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full text-center mt-16">
+            <div class="inline-flex items-center gap-2 py-1.5 px-5 rounded-full bg-white/10 border border-white/20 backdrop-blur-md text-white/90 font-medium text-sm mb-6 shadow-lg">
+                <span class="w-2 h-2 rounded-full bg-brand animate-pulse"></span>
+                Geleceğin Tarım Ekosistemi
+            </div>
+            <h1 class="text-5xl sm:text-6xl md:text-8xl font-extrabold text-white tracking-tight leading-tight mb-6 drop-shadow-2xl">
+                Toprağın Dilini <br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-light to-emerald-200">Teknolojiyle Çözün</span>
+            </h1>
+            <p class="text-lg sm:text-xl text-slate-200 mb-10 leading-relaxed font-light max-w-2xl mx-auto drop-shadow-md">
+                Gelişmiş görüntü işleme algoritmaları, akıllı sensör verileri ve modern sürü yönetimi ile çiftliğinizde yepyeni bir verimlilik çağı başlatın.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-5 justify-center items-center">
+                <button onclick="openModal('register')" class="w-full sm:w-auto bg-brand hover:bg-brand-dark text-white px-8 py-4 rounded-full font-semibold text-lg transition-all duration-300 shadow-[0_10px_40px_rgba(16,185,129,0.4)] hover:shadow-[0_15px_50px_rgba(16,185,129,0.6)] transform hover:-translate-y-1 flex items-center justify-center gap-3">
+                    Aramıza Katıl <i class="fa-solid fa-arrow-right"></i>
+                </button>
+                <a href="#ozellikler" class="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border border-white/30 backdrop-blur-md px-8 py-4 rounded-full font-semibold text-lg transition-all duration-300 flex items-center justify-center">
+                    Sistemi İncele
+                </a>
+            </div>
+        </div>
+        
+        <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-10 animate-bounce">
+            <a href="#ozellikler" class="text-white/70 hover:text-white transition-colors">
+                <i class="fa-solid fa-chevron-down text-2xl"></i>
+            </a>
+        </div>
+    </section>
+
+    <section id="ozellikler" class="py-24 bg-slate-50 dark:bg-dark-900 transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="text-brand font-bold tracking-widest uppercase text-sm mb-3">Merkezi Kontrol</h2>
+                <h3 class="text-4xl md:text-5xl font-extrabold text-dark-900 dark:text-white mb-5 tracking-tight transition-colors duration-300">Akıllı Çiftlik Yönetimi</h3>
+                <p class="text-slate-600 dark:text-slate-400 text-lg transition-colors duration-300">Platformumuz, tarım ve hayvancılık operasyonlarınızı görsel ve veri odaklı bir şekilde yönetmenizi sağlar.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="relative h-[450px] rounded-[2.5rem] overflow-hidden group cursor-pointer shadow-2xl">
+                    <img src="https://images.unsplash.com/photo-1628352081506-83c43123ed6d?auto=format&fit=crop&w=800&q=80" alt="Akıllı Sera" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                    <div class="absolute inset-0 img-gradient-overlay"></div>
+                    <div class="relative h-full flex flex-col justify-end p-8">
+                        <div class="w-12 h-12 rounded-full bg-brand flex items-center justify-center text-white mb-4 shadow-lg transform group-hover:-translate-y-2 transition-transform duration-300">
+                            <i class="fa-solid fa-microchip text-xl"></i>
+                        </div>
+                        <h4 class="text-2xl font-bold text-white mb-2">Sensör Entegrasyonu</h4>
+                        <p class="text-slate-300 leading-relaxed text-sm">Arazinizdeki nem, sıcaklık ve toprak durumu verilerini anlık olarak panelinize yansıtın.</p>
+                    </div>
+                </div>
+
+                <div class="relative h-[450px] rounded-[2.5rem] overflow-hidden group cursor-pointer shadow-2xl md:-translate-y-8">
+                    <img src="https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=800&q=80" alt="Toprak Analizi" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                    <div class="absolute inset-0 img-gradient-overlay"></div>
+                    <div class="relative h-full flex flex-col justify-end p-8">
+                        <div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white mb-4 shadow-lg transform group-hover:-translate-y-2 transition-transform duration-300">
+                            <i class="fa-solid fa-cloud-sun text-xl"></i>
+                        </div>
+                        <h4 class="text-2xl font-bold text-white mb-2">İklim & Hava Durumu</h4>
+                        <p class="text-slate-300 leading-relaxed text-sm">Tam konumunuza özel rüzgar, nem ve yapay zeka destekli erken don uyarısı alın.</p>
+                    </div>
+                </div>
+
+                <div class="relative h-[450px] rounded-[2.5rem] overflow-hidden group cursor-pointer shadow-2xl">
+                    <img src="https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&w=800&q=80" alt="Sürü Yönetimi" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                    <div class="absolute inset-0 img-gradient-overlay"></div>
+                    <div class="relative h-full flex flex-col justify-end p-8">
+                        <div class="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center text-white mb-4 shadow-lg transform group-hover:-translate-y-2 transition-transform duration-300">
+                            <i class="fa-solid fa-cow text-xl"></i>
+                        </div>
+                        <h4 class="text-2xl font-bold text-white mb-2">Sürü Yönetimi</h4>
+                        <p class="text-slate-300 leading-relaxed text-sm">Büyükbaş ve küçükbaş hayvanlarınızın sağlık, aşı ve gelişim takiplerini dijitalleştirin.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="gorsel-hafiza" class="py-24 bg-white dark:bg-slate-800 transition-colors duration-300 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col lg:flex-row items-center gap-16">
+                <div class="w-full lg:w-5/12 space-y-8">
+                    <div>
+                        <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand/10 text-brand-dark dark:text-brand-light text-sm font-bold mb-4 border border-brand/20">
+                            <i class="fa-solid fa-camera-rotate"></i> İnteraktif Tarla Defteri
+                        </span>
+                        <h2 class="text-4xl md:text-5xl font-extrabold text-dark-900 dark:text-white leading-tight mb-6 transition-colors duration-300">Tarlanızın <br>Görsel Hafızası</h2>
+                        <p class="text-slate-600 dark:text-slate-300 text-lg leading-relaxed transition-colors duration-300">
+                            Tarlanızın gelişim sürecini yüksek çözünürlüklü fotoğraflarla kaydedin. Yeni yüklediğiniz verileri geçmiş yıllarla <strong>kıyaslayarak</strong> rekolte ve büyüme farklarını net bir şekilde görün. 
+                        </p>
+                    </div>
+                    
+                    <div class="glass-card rounded-2xl p-6 bg-slate-50 dark:bg-dark-900 border-none shadow-md transition-colors duration-300">
+                        <div class="flex items-center gap-4 mb-3">
+                            <div class="w-10 h-10 rounded-full bg-dark-900 dark:bg-brand text-white flex items-center justify-center transition-colors duration-300">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </div>
+                            <h4 class="font-bold text-dark-900 dark:text-white text-lg transition-colors duration-300">Derinlemesine İnceleyin</h4>
+                        </div>
+                        <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed transition-colors duration-300">
+                            Sağdaki görselin üzerine gelerek detayları yakından inceleyin. Her bir fotoğraf piksellere kadar analiz edilir.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="w-full lg:w-7/12 relative group zoom-container">
+                    <div class="absolute inset-0 bg-brand/30 dark:bg-brand/20 blur-[80px] rounded-full transform -translate-x-5 translate-y-10 -z-10 transition-all duration-[1.5s] group-hover:bg-brand/60 dark:group-hover:bg-brand/40 group-hover:scale-125"></div>
+                    
+                    <div class="relative rounded-[2.5rem] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.2)] bg-dark-900 border-[6px] border-white dark:border-slate-700 z-10 transition-all duration-[1.5s] group-hover:shadow-[0_30px_70px_rgba(16,185,129,0.4)]">
+                        <img src="https://images.unsplash.com/photo-1605000797499-95a51c5269ae?auto=format&fit=crop&w=1200&q=80" alt="Tarla Kıyaslama" 
+                             class="w-full h-[550px] object-cover zoom-image opacity-90 group-hover:opacity-100">
+                        
+                        <div class="absolute inset-0 bg-gradient-to-t from-dark-900/90 via-dark-900/20 to-transparent opacity-100 transition-opacity duration-[1.5s] group-hover:opacity-30"></div>
+                        
+                        <div class="absolute top-6 left-6 glass-card rounded-full px-5 py-2.5 flex items-center gap-3 transform transition-all duration-[1.5s] group-hover:-translate-y-3 group-hover:opacity-0">
+                            <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                            <span class="text-sm font-bold text-dark-900 dark:text-white">Geçmiş: Nisan 2025</span>
+                        </div>
+                        
+                        <div class="absolute bottom-8 right-8 glass-card rounded-full px-6 py-3 flex items-center gap-3 transform transition-all duration-[1.5s] group-hover:translate-y-0 group-hover:-translate-x-2 group-hover:bg-brand group-hover:border-brand-light shadow-xl">
+                            <span class="w-3 h-3 rounded-full bg-brand dark:bg-white animate-pulse hidden group-hover:block"></span>
+                            <span class="text-sm font-bold transition-colors text-dark-900 dark:text-white group-hover:text-white dark:group-hover:text-dark-900">Güncel Durum: Mayıs 2026</span>
+                            <i class="fa-solid fa-expand transition-colors text-brand group-hover:text-white dark:group-hover:text-dark-900 ml-1"></i>
+                        </div>
+
+                        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-[1s] delay-100 pointer-events-none">
+                            <div class="w-24 h-24 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/50 text-white shadow-2xl">
+                                <i class="fa-solid fa-magnifying-glass-plus text-4xl drop-shadow-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="yapay-zeka" class="py-24 bg-slate-50 dark:bg-dark-900 transition-colors duration-300 overflow-hidden border-t border-slate-200 dark:border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col lg:flex-row items-center gap-16">
+                <div class="w-full lg:w-1/2 space-y-8 order-2 lg:order-1">
+                    <div>
+                        <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-bold mb-4 border border-blue-100 dark:border-blue-800">
+                            <i class="fa-solid fa-brain"></i> Derin Öğrenme Modelleri
+                        </span>
+                        <h2 class="text-4xl md:text-5xl font-extrabold text-dark-900 dark:text-white leading-tight mb-6 transition-colors duration-300">Tazelik ve Mahsul <br>Sınıflandırması</h2>
+                        <p class="text-slate-600 dark:text-slate-400 text-lg leading-relaxed transition-colors duration-300">
+                            Arazinizdeki meyve ve sebzelerin fotoğraflarını sisteme yükleyin. Gelişmiş yapay zeka algoritmalarımız; ürünün tazelik durumunu, olgunluk seviyesini ve olası hastalık risklerini saniyeler içinde analiz etsin.
+                        </p>
+                    </div>
+                    
+                    <ul class="space-y-6">
+                        <li class="flex items-start">
+                            <div class="flex-shrink-0 w-12 h-12 rounded-[1rem] bg-blue-500 text-white flex items-center justify-center mr-4 shadow-md">
+                                <i class="fa-solid fa-apple-whole text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-dark-900 dark:text-white text-xl transition-colors duration-300">Meyve Tazelik Tespiti</h4>
+                                <p class="text-slate-600 dark:text-slate-400 mt-1 leading-relaxed text-sm transition-colors duration-300">Görüntü işleme teknolojisi ile hasat zamanını optimize edin ve fire oranını düşürün.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start">
+                            <div class="flex-shrink-0 w-12 h-12 rounded-[1rem] bg-brand text-white flex items-center justify-center mr-4 shadow-md">
+                                <i class="fa-solid fa-seedling text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-dark-900 dark:text-white text-xl transition-colors duration-300">Toprak ve Mahsul Önerisi</h4>
+                                <p class="text-slate-600 dark:text-slate-400 mt-1 leading-relaxed text-sm transition-colors duration-300">Toprak analizi verilerinize göre arazinizde en yüksek verimi verecek ürünleri keşfedin.</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="w-full lg:w-1/2 relative order-1 lg:order-2">
+                    <div class="absolute inset-0 bg-blue-500/20 blur-[80px] rounded-full transform translate-x-10 -translate-y-10"></div>
+                    <div class="relative rounded-[2.5rem] overflow-hidden border-[6px] border-white dark:border-slate-800 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.15)] dark:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] bg-white dark:bg-slate-800 group transition-all duration-300">
+                        <img src="https://images.unsplash.com/photo-1590682680695-43b964a3ae17?auto=format&fit=crop&w=1000&q=80" alt="Yapay Zeka Tarım" class="w-full h-[550px] object-cover transition-transform duration-700 group-hover:scale-105">
+                        
+                        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-brand/50 rounded-3xl animate-pulse"></div>
+                        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-1 bg-brand/80 shadow-[0_0_15px_#10b981]" style="animation: scan 2s ease-in-out infinite alternate;"></div>
+
+                        <div class="absolute bottom-6 left-6 glass-card rounded-2xl p-4 flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500 dark:text-slate-300 font-semibold uppercase">Yapay Zeka Sonucu</p>
+                                <p class="text-sm font-bold text-dark-900 dark:text-white">%98 Olgunluk - Hasada Uygun</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <style> @keyframes scan { 0% { top: 25%; } 100% { top: 75%; } } </style>
+    </section>
+
+    <footer class="bg-dark-900 pt-16 pb-8 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-12">
+                <div class="flex items-center mb-6 md:mb-0">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center text-white mr-3 shadow-lg">
+                        <i class="fa-solid fa-leaf text-xl"></i>
+                    </div>
+                    <span class="font-bold text-2xl tracking-tight text-white">Agri<span class="text-brand">Synth</span></span>
+                </div>
+                <div class="flex space-x-4">
+                    <a href="#" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-brand hover:text-white transition-all transform hover:scale-110"><i class="fa-brands fa-twitter"></i></a>
+                    <a href="#" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-brand hover:text-white transition-all transform hover:scale-110"><i class="fa-brands fa-instagram"></i></a>
+                    <a href="#" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-brand hover:text-white transition-all transform hover:scale-110"><i class="fa-brands fa-linkedin-in"></i></a>
+                </div>
+            </div>
+            <div class="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center text-center md:text-left">
+                <p class="text-slate-500 text-sm mb-4 md:mb-0">&copy; 2026 AgriSynth Dijital Platform. Tüm hakları saklıdır.</p>
+                <div class="flex space-x-6 text-sm text-slate-500 justify-center">
+                    <a href="#" class="hover:text-white transition-colors">Gizlilik Politikası</a>
+                    <a href="#" class="hover:text-white transition-colors">Kullanım Koşulları</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <div id="authModal" class="hidden fixed inset-0 z-[100] items-center justify-center bg-dark-900/70 backdrop-blur-md p-4 overflow-y-auto transition-all">
+        <div class="glass-modal relative w-full max-w-lg rounded-[2.5rem] p-8 sm:p-10 shadow-[0_0_60px_rgba(0,0,0,0.4)] my-4 mx-auto max-h-[95vh] overflow-y-auto">
+            
+            <button type="button" onclick="closeModal()" class="absolute top-6 right-6 w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 transition-colors z-10 cursor-pointer">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div id="authMessage" class="hidden mb-6 p-4 rounded-xl text-sm text-center font-medium border"></div>
+
+            <div id="registerFormContainer" class="block">
+                <div class="text-center mb-8">
+                    <div class="w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-brand to-emerald-400 flex items-center justify-center text-white mx-auto mb-5 shadow-xl shadow-brand/20">
+                        <i class="fa-solid fa-seedling text-3xl"></i>
+                    </div>
+                    <h3 class="text-3xl font-extrabold text-dark-900 dark:text-white">Aramıza Katılın</h3>
+                    <p class="text-slate-500 dark:text-slate-400 text-sm mt-2">AgriSynth ile çiftliğinizi teknolojiyle buluşturun</p>
+                </div>
+                
+                <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Ad</label>
+                            <input type="text" id="regAd" required class="w-full px-4 py-3 bg-slate-50/80 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-brand focus:ring-4 focus:ring-brand/10 outline-none transition-all placeholder-slate-400 font-medium text-slate-700 dark:text-white" placeholder="İsminiz">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Soyad</label>
+                            <input type="text" id="regSoyad" required class="w-full px-4 py-3 bg-slate-50/80 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-brand focus:ring-4 focus:ring-brand/10 outline-none transition-all placeholder-slate-400 font-medium text-slate-700 dark:text-white" placeholder="Soyisminiz">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">TC Kimlik No</label>
+                            <input type="text" id="regTc" maxlength="11" pattern="\d{11}" required class="w-full px-4 py-3 bg-slate-50/80 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-brand focus:ring-4 focus:ring-brand/10 outline-none transition-all placeholder-slate-400 font-medium text-slate-700 dark:text-white" placeholder="11 Haneli">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Telefon</label>
+                            <input type="tel" id="regTelefon" required class="w-full px-4 py-3 bg-slate-50/80 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-brand focus:ring-4 focus:ring-brand/10 outline-none transition-all placeholder-slate-400 font-medium text-slate-700 dark:text-white" placeholder="5XX XXX XX XX">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Şehir</label>
+                            <input type="text" id="regSehir" required class="w-full px-4 py-3 bg-slate-50/80 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-brand focus:ring-4 focus:ring-brand/10 outline-none transition-all placeholder-slate-400 font-medium text-slate-700 dark:text-white" placeholder="Örn: Tekirdağ">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Hesap Türü</label>
+                            <select id="regRol" required class="w-full px-4 py-3 bg-slate-50/80 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-brand focus:ring-4 focus:ring-brand/10 outline-none transition-all font-medium text-slate-700 dark:text-white appearance-none">
+                                <option value="">Seçiniz...</option>
+                                <option value="ciftci">Çiftçi Paneli</option>
+                                <option value="doktor">Doktor Paneli</option>
+                                <option value="user">Standart Kullanıcı</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Kullanıcı Adı <span class="text-xs text-slate-400 font-normal">(Sistemdeki adınız)</span></label>
+                        <input type="text" id="regUsername" required class="w-full px-4 py-3 bg-slate-50/80 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-brand focus:ring-4 focus:ring-brand/10 outline-none transition-all placeholder-slate-400 font-bold text-dark-900 dark:text-white" placeholder="benzersiz_kullaniciadi">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">E-posta Adresi <span class="text-brand text-xs ml-1">(Girişte kullanılacak)</span></label>
+                        <input type="email" id="regEmail" required class="w-full px-4 py-3 bg-slate-50/80 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-brand focus:ring-4 focus:ring-brand/10 outline-none transition-all placeholder-slate-400 font-medium text-slate-700 dark:text-white" placeholder="ornek@email.com">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Şifre</label>
+                        <input type="password" id="regPassword" required minlength="6" class="w-full px-4 py-3 bg-slate-50/80 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-brand focus:ring-4 focus:ring-brand/10 outline-none transition-all placeholder-slate-400 font-medium text-slate-700 dark:text-white" placeholder="En az 6 karakter">
+                    </div>
+                    
+                    <button type="submit" id="btnRegister" class="w-full bg-dark-900 dark:bg-white dark:text-dark-900 hover:bg-brand dark:hover:bg-brand text-white font-bold text-lg py-4 rounded-xl transition-all duration-300 mt-4 shadow-xl hover:shadow-brand/40 transform hover:-translate-y-0.5">Hesabımı Oluştur</button>
+                </form>
+                <p class="text-center text-slate-500 dark:text-slate-400 mt-6 text-sm">
+                    Zaten hesabınız var mı? <button type="button" onclick="toggleAuthMode('login')" class="text-dark-900 dark:text-white font-bold hover:text-brand dark:hover:text-brand transition-colors cursor-pointer">Giriş Yap</button>
+                </p>
+            </div>
+
+            <div id="loginFormContainer" class="hidden">
+                <div class="text-center mb-10 mt-4">
+                    <div class="w-20 h-20 rounded-[1.5rem] bg-gradient-to-br from-brand to-emerald-400 flex items-center justify-center text-white mx-auto mb-6 shadow-xl shadow-brand/20">
+                        <i class="fa-solid fa-lock text-3xl"></i>
+                    </div>
+                    <h3 class="text-3xl font-extrabold text-dark-900 dark:text-white">Hoş Geldiniz</h3>
+                    <p class="text-slate-500 dark:text-slate-400 text-sm mt-2">Sisteme erişmek için bilgilerinizi girin</p>
+                </div>
+                
+                <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">E-posta Adresi</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                <i class="fa-solid fa-at"></i>
+                            </div>
+                            <input type="email" id="loginEmail" required class="w-full pl-11 pr-4 py-4 bg-slate-50/80 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-brand focus:ring-4 focus:ring-brand/10 outline-none transition-all font-bold text-dark-900 dark:text-white" placeholder="E-posta adresiniz">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Şifre</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                <i class="fa-solid fa-key"></i>
+                            </div>
+                            <input type="password" id="loginPassword" required class="w-full pl-11 pr-4 py-4 bg-slate-50/80 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-brand focus:ring-4 focus:ring-brand/10 outline-none transition-all font-medium text-slate-700 dark:text-white" placeholder="••••••••">
+                        </div>
+                        <div class="text-right mt-2">
+                            <button type="button" onclick="toggleAuthMode('forgot')" class="text-brand text-sm font-semibold hover:underline transition-all">Şifremi Unuttum</button>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" id="btnLogin" class="w-full bg-brand hover:bg-brand-dark text-white font-bold text-lg py-4 rounded-xl transition-all duration-300 shadow-xl hover:shadow-brand/40 transform hover:-translate-y-0.5 mt-4">Sisteme Giriş Yap</button>
+                </form>
+                <p class="text-center text-slate-500 dark:text-slate-400 mt-8 text-sm">
+                    Henüz hesabınız yok mu? <button type="button" onclick="toggleAuthMode('register')" class="text-brand font-bold hover:text-brand-dark transition-colors cursor-pointer">Hemen Oluştur</button>
+                </p>
+            </div>
+
+            <div id="forgotPasswordFormContainer" class="hidden">
+                <div class="text-center mb-10 mt-4">
+                    <div class="w-20 h-20 rounded-[1.5rem] bg-gradient-to-br from-brand to-emerald-400 flex items-center justify-center text-white mx-auto mb-6 shadow-xl shadow-brand/20">
+                        <i class="fa-solid fa-envelope-open-text text-3xl"></i>
+                    </div>
+                    <h3 class="text-3xl font-extrabold text-dark-900 dark:text-white">Şifre Sıfırlama</h3>
+                    <p class="text-slate-500 dark:text-slate-400 text-sm mt-2">Kayıtlı e-posta adresinizi girin, sıfırlama bağlantısı gönderelim.</p>
+                </div>
+                
+                <form id="forgotForm" onsubmit="handleForgotPassword(event)" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">E-posta Adresi</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                <i class="fa-solid fa-at"></i>
+                            </div>
+                            <input type="email" id="forgotEmail" required class="w-full pl-11 pr-4 py-4 bg-slate-50/80 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 focus:border-brand focus:ring-4 focus:ring-brand/10 outline-none transition-all font-bold text-dark-900 dark:text-white" placeholder="ornek@email.com">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" id="btnForgot" class="w-full bg-brand hover:bg-brand-dark text-white font-bold text-lg py-4 rounded-xl transition-all duration-300 shadow-xl hover:shadow-brand/40 transform hover:-translate-y-0.5 mt-4">Bağlantıyı Gönder</button>
+                </form>
+                
+                <p class="text-center text-slate-500 dark:text-slate-400 mt-8 text-sm">
+                    Vazgeçtim, <button type="button" onclick="toggleAuthMode('login')" class="text-brand font-bold hover:text-brand-dark transition-colors cursor-pointer">Giriş Ekranına Dön</button>
+                </p>
+            </div>
+            
+        </div>
+    </div>
+
+    <script>
+        // Supabase Bağlantısı
+        const supabaseUrl = 'https://chozcpctihufghnzsten.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNob3pjcGN0aWh1ZmdobnpzdGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2MzYxNTAsImV4cCI6MjA4ODIxMjE1MH0.r3ZwkAT0RqWHryEolLwcUzsB2Gu-iW3O9fKesyjd6eE';
+        const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // DARK MODE TOGGLE LOGIC
+        function toggleTheme() {
+            const htmlClasses = document.documentElement.classList;
+            const themeIcon = document.getElementById('themeIcon');
+            const themeIconMobile = document.getElementById('themeIconMobile');
+            
+            if (htmlClasses.contains('dark')) {
+                htmlClasses.remove('dark');
+                localStorage.setItem('theme', 'light');
+                if(themeIcon) themeIcon.classList.replace('fa-sun', 'fa-moon');
+                if(themeIconMobile) themeIconMobile.classList.replace('fa-sun', 'fa-moon');
+            } else {
+                htmlClasses.add('dark');
+                localStorage.setItem('theme', 'dark');
+                if(themeIcon) themeIcon.classList.replace('fa-moon', 'fa-sun');
+                if(themeIconMobile) themeIconMobile.classList.replace('fa-moon', 'fa-sun');
+            }
+        }
+
+        // INIT THEME ICON ON LOAD
+        window.addEventListener('DOMContentLoaded', () => {
+            const isDark = document.documentElement.classList.contains('dark');
+            const themeIcon = document.getElementById('themeIcon');
+            const themeIconMobile = document.getElementById('themeIconMobile');
+            if (isDark) {
+                if(themeIcon) themeIcon.classList.replace('fa-moon', 'fa-sun');
+                if(themeIconMobile) themeIconMobile.classList.replace('fa-moon', 'fa-sun');
+            }
+        });
+
+        // Scroll Navbar
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if (window.scrollY > 20) { 
+                nav.classList.add('shadow-md'); 
+                if(document.documentElement.classList.contains('dark')) {
+                    nav.style.background = 'rgba(15, 23, 42, 0.95)';
+                } else {
+                    nav.style.background = 'rgba(255, 255, 255, 0.9)';
+                }
+            } else { 
+                nav.classList.remove('shadow-md'); 
+                nav.style.background = ''; // Resets to CSS class style
+            }
+        });
+
+        // MOBİL MENÜ ANİMASYONU
+        function toggleMobileMenu() { 
+            const menu = document.getElementById('mobile-menu');
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                setTimeout(() => {
+                    menu.classList.add('opacity-100', 'translate-y-0');
+                    menu.classList.remove('opacity-0', '-translate-y-4');
+                }, 10);
+            } else {
+                menu.classList.remove('opacity-100', 'translate-y-0');
+                menu.classList.add('opacity-0', '-translate-y-4');
+                setTimeout(() => {
+                    menu.classList.add('hidden');
+                }, 300); // Transition süresi kadar bekle
+            }
+        }
+        
+        function openModal(mode) {
+            const modal = document.getElementById('authModal');
+            modal.classList.remove('hidden'); 
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden'; 
+            toggleAuthMode(mode);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('authModal');
+            modal.classList.add('hidden'); 
+            modal.classList.remove('flex');
+            document.body.style.overflow = 'auto'; 
+            document.getElementById('authMessage').classList.add('hidden');
+        }
+
+        document.getElementById('authModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        function toggleAuthMode(mode) {
+            document.getElementById('authMessage').classList.add('hidden');
+            const loginContainer = document.getElementById('loginFormContainer');
+            const registerContainer = document.getElementById('registerFormContainer');
+            const forgotContainer = document.getElementById('forgotPasswordFormContainer');
+            
+            // Tüm formları gizle
+            loginContainer.classList.add('hidden');
+            registerContainer.classList.add('hidden');
+            if(forgotContainer) forgotContainer.classList.add('hidden');
+
+            // İstenen formu göster
+            if(mode === 'login') {
+                loginContainer.classList.remove('hidden');
+            } else if (mode === 'register') {
+                registerContainer.classList.remove('hidden');
+            } else if (mode === 'forgot') {
+                forgotContainer.classList.remove('hidden');
+            }
+        }
+
+        function showMessage(msg, isError = false) {
+            const msgBox = document.getElementById('authMessage');
+            msgBox.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'border-red-200', 'dark:bg-red-900/30', 'dark:border-red-800', 'bg-emerald-50', 'text-emerald-600', 'border-emerald-200', 'dark:bg-emerald-900/30', 'dark:border-emerald-800');
+            
+            if (isError) {
+                msgBox.classList.add('bg-red-50', 'text-red-600', 'border-red-200', 'dark:bg-red-900/30', 'dark:border-red-800');
+            } else {
+                msgBox.classList.add('bg-emerald-50', 'text-emerald-600', 'border-emerald-200', 'dark:bg-emerald-900/30', 'dark:border-emerald-800');
+            }
+            msgBox.innerHTML = `<i class="fa-solid ${isError ? 'fa-circle-exclamation' : 'fa-circle-check'} mr-2 text-lg align-middle"></i> ${msg}`;
+            const modalContent = document.querySelector('.glass-modal');
+            if(modalContent) modalContent.scrollTop = 0;
+        }
+
+        // KAYIT VE E-POSTA GÖNDERİMİ (Gerçek E-posta'ya Geçildi)
+        async function handleRegister(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnRegister');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Oluşturuluyor...'; 
+            btn.disabled = true;
+
+            const username = document.getElementById('regUsername').value.trim().toLowerCase();
+            const password = document.getElementById('regPassword').value;
+            // Şifre sıfırlama çalışması için gerçek email kullanıldı:
+            const realEmail = document.getElementById('regEmail').value.trim();
+            
+            const userData = {
+                ad: document.getElementById('regAd').value,
+                soyad: document.getElementById('regSoyad').value,
+                tc_kimlik: document.getElementById('regTc').value,
+                telefon: document.getElementById('regTelefon').value,
+                sehir: document.getElementById('regSehir').value,
+                rol: document.getElementById('regRol').value,
+                email: realEmail, 
+                sifre: password 
+            };
+
+            try {
+                // Supabase Kullanıcı Oluşturma (Gerçek mail ile)
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email: realEmail,
+                    password: password,
+                });
+
+                if (error) {
+                    showMessage('Kayıt başarısız: E-posta adresi sistemde zaten mevcut olabilir.', true);
+                    return;
+                }
+
+                if (data && data.user) {
+                    const { error: dbError } = await supabaseClient.from('users').insert([{
+                        id: data.user.id,
+                        username: username,
+                        ...userData
+                    }]);
+
+                    if (dbError) {
+                        showMessage('Hata: Profil detayları kaydedilemedi.', true);
+                    } else {
+                        // --- EMAILJS İLE HOŞ GELDİN MAİLİ GÖNDERME ---
+                        const emailParams = {
+                            to_name: userData.ad + ' ' + userData.soyad,
+                            to_email: userData.email, // Kullanıcının girdiği mail
+                        };
+
+                        emailjs.send('service_5dd3nnx', 'template_ugtfjc4', emailParams)
+                            .then(function(response) {
+                                console.log('Mail başarıyla gönderildi!', response.status, response.text);
+                            }, function(error) {
+                                console.log('Mail gönderme başarısız...', error);
+                            });
+
+                        showMessage('Kayıt Başarılı! Sisteme yönlendiriliyorsunuz...');
+                        document.getElementById('registerForm').reset();
+                        
+                        setTimeout(() => {
+                            toggleAuthMode('login');
+                            document.getElementById('loginEmail').value = realEmail; 
+                        }, 2000);
+                    }
+                }
+            } catch (err) {
+                showMessage('Beklenmeyen bir hata oluştu.', true);
+            } finally {
+                btn.innerHTML = originalText; btn.disabled = false;
+            }
+        }
+
+        // GİRİŞ - ROL BAZLI YÖNLENDİRME (Kullanıcı Adı yerine E-posta ile Giriş)
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnLogin');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Giriş Yapılıyor...'; 
+            btn.disabled = true;
+
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                // E-posta ve şifre ile giriş
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+
+                if (error) {
+                    showMessage('Hatalı giriş. E-posta adresi veya şifrenizi kontrol edin.', true);
+                } else if (data && data.user) {
+                    showMessage('Giriş başarılı! Profiliniz yükleniyor...');
+                    
+                    const { data: profileData } = await supabaseClient
+                        .from('users').select('rol').eq('id', data.user.id).single();
+
+                    setTimeout(() => {
+                        closeModal();
+                        if (profileData && profileData.rol === 'ciftci') {
+                            window.location.href = 'ciftci.html';
+                        } else if (profileData && profileData.rol === 'doktor') {
+                            window.location.href = 'doktor.html';
+                        } else if (profileData && profileData.rol === 'user') {
+                            window.location.href = 'normal-user.html';
+                        } else {
+                            window.location.href = 'normal-user.html';
+                        }
+                    }, 1500);
+                }
+            } catch (err) {
+                showMessage('Beklenmeyen bir hata oluştu.', true);
+            } finally {
+                btn.innerHTML = originalText; btn.disabled = false;
+            }
+        }
+
+        // ŞİFREMİ UNUTTUM / SIFIRLAMA İŞLEMİ DÜZELTİLDİ (HATA YAKALAMA)
+        async function handleForgotPassword(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnForgot');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Gönderiliyor...'; 
+            btn.disabled = true;
+
+            const email = document.getElementById('forgotEmail').value.trim();
+
+            try {
+                // Şifre sıfırlama linki gönderme
+                const { data, error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+                    redirectTo: 'https://sifre-yenileme.vercel.app/', 
+                });
+
+                if (error) {
+                    // Supabase'in 429 limiti veya diğer hatalarını doğru yakalayalım
+                    if(error.status === 429) {
+                        showMessage('Çok fazla istek gönderdiniz. Lütfen birkaç dakika sonra tekrar deneyin.', true);
+                    } else {
+                        showMessage('Hata: E-posta adresi sistemde bulunamadı veya geçersiz.', true);
+                    }
+                } else {
+                    showMessage('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi!');
+                    document.getElementById('forgotForm').reset();
+                }
+            } catch (err) {
+                showMessage('Beklenmeyen bir hata oluştu.', true);
+            } finally {
+                btn.innerHTML = originalText; 
+                btn.disabled = false;
+            }
+        }
+
+        // --- GÜVENLİK VE KONSOL ENGELLEME ---
+        document.addEventListener('contextmenu', event => event.preventDefault());
+
+        document.addEventListener('keydown', function(e) {
+            if (
+                e.key === 'F12' || 
+                (e.ctrlKey && e.shiftKey && e.key === 'I') || 
+                (e.ctrlKey && e.shiftKey && e.key === 'J') || 
+                (e.ctrlKey && e.shiftKey && e.key === 'C') || 
+                (e.ctrlKey && e.key === 'U')
+            ) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    </script>
+</body>
+</html>
