@@ -1,86 +1,101 @@
 /**
- * FLOWHIVE NEXUS - PURE EDGE SHIELD (NO IMPORTS)
- * Konum: /middleware.js (Vercel Root)
+ * FLOWHIVE NEXUS - ENTERPRISE EDGE WAF (Web Application Firewall)
+ * Sürüm: 3.1.0 | Sıfır Bağımlılık (Pure Edge)
  */
 
-export default function middleware(req, event) {
-    // 1. Ziyaretçi Verilerini Yakala
-    const forwarded = req.headers.get('x-forwarded-for');
-    const ip = forwarded ? forwarded.split(',')[0] : 'Bilinmeyen IP';
-    const userAgent = req.headers.get('user-agent') || 'Bilinmeyen Tarayici';
+// SHA-256 Kriptografik Parmak İzi Üretici
+async function generateFingerprint(req, ip) {
+    const userAgent = req.headers.get('user-agent') || 'unknown';
+    const acceptLang = req.headers.get('accept-language') || 'unknown';
+    const secChUa = req.headers.get('sec-ch-ua') || 'unknown';
     
-    // 🛡️ KRİTİK: Ngrok adresin değiştikçe burayı güncellemeyi unutma!
+    // Tarayıcı donanım ve ağ verilerini birleştir
+    const rawData = `${ip}|${userAgent}|${acceptLang}|${secChUa}`;
+    
+    // Vercel Edge üzerinde donanımsal SHA-256 şifreleme
+    const msgBuffer = new TextEncoder().encode(rawData);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    return `FH-DEV-${hashHex.substring(0, 12).toUpperCase()}`;
+}
+
+export default async function middleware(req, event) {
+    const forwarded = req.headers.get('x-forwarded-for');
+    const ip = forwarded ? forwarded.split(',')[0] : '127.0.0.1';
+    
+    // NGROK LİNKİNİ BURAYA GİR
     const NGROK_LINK = 'https://davida-unslain-allen.ngrok-free.dev/api/trigger-alert';
 
     const url = new URL(req.url);
     const path = url.pathname.toLowerCase();
     const query = url.search.toLowerCase();
+    const method = req.method;
 
-    // 2. Akıllı Saldırı Analizi (WAF Logic)
-    let detected_threat = "DDoS Volumetric"; 
+    // 1. ENTERPRISE WAF KURALLARI (RegEx)
+    const sqliRegex = /(union|select|insert|update|delete|drop|--|#|\/\*|' OR 1=1)/i;
+    const xssRegex = /(<script>|%3cscript%3e|onload=|onerror=|javascript:)/i;
+    const lfiRegex = /(\.\.\/|\.\.\\|\/etc\/passwd|\/windows\/win.ini)/i;
 
-    // Giriş sayfasına yoğun POST isteği geliyorsa
-    if (req.method === 'POST' && (path.includes('login') || path.includes('auth'))) {
-        detected_threat = "Brute Force Password Attack";
-    } 
-    // URL içinde SQL komutları aranıyorsa
-    else if (query.includes('select') || query.includes('union') || query.includes("'")) {
-        detected_threat = "SQL Injection (SQLi)";
+    let detected_threat = null;
+    let confidence = 0.0;
+
+    if (method === 'POST' && (path.includes('login') || path.includes('auth'))) {
+        detected_threat = "Brute Force Authentication"; confidence = 0.92;
+    } else if (sqliRegex.test(query) || sqliRegex.test(path)) {
+        detected_threat = "SQL Injection (SQLi) Payload"; confidence = 0.99;
+    } else if (xssRegex.test(query)) {
+        detected_threat = "Cross-Site Scripting (XSS)"; confidence = 0.98;
+    } else if (lfiRegex.test(query)) {
+        detected_threat = "Local File Inclusion (LFI)"; confidence = 0.97;
+    } else if (method === 'GET' && path === '/') {
+        // Normal trafik için DDoS şüphesi (AI modeli desteklemeli)
+        detected_threat = "Volumetric Traffic (Potential DDoS)"; confidence = 0.75;
     }
-    // URL içinde script kodu geçiyorsa
-    else if (query.includes('<script>') || query.includes('%3cscript%3e')) {
-        detected_threat = "Cross-Site Scripting (XSS)";
-    }
 
-    // Cihaz Parmak İzi (Fingerprint)
-    const device_id = "DEV-VRC-" + (ip.length + userAgent.length + 99);
+    // 2. Kriptografik Cihaz Parmak İzini Oluştur
+    const device_id = await generateFingerprint(req, ip);
 
-    /**
-     * 3. AKTİF SAVUNMA VE RAPORLAMA
-     * Bu işlem hem SOC paneline veri gönderir hem de Python'dan gelen engelleme emrine bakar.
-     */
-    return fetch(NGROK_LINK, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            source_ip: ip,
-            destination_ip: "Farmer Project (Vercel)",
-            threat_type: detected_threat,
-            confidence: 0.98,
-            device_id: device_id
-        }),
-    })
-    .then(res => {
-        /**
-         * EĞER SEN PANELDE 'BAN' TUŞUNA BASTIYSAN:
-         * Python backend bu isteğe 403 (Forbidden) cevabı dönecek.
-         */
-        if (res.status === 403) {
+    // 3. SOC Merkezine Raporla ve Kararı Bekle
+    try {
+        const response = await fetch(NGROK_LINK, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                source_ip: ip,
+                destination_ip: url.hostname,
+                threat_type: detected_threat || "Unknown Anomaly",
+                confidence: confidence,
+                device_id: device_id,
+                path_accessed: path
+            }),
+        });
+
+        // 4. KESİN ENGELLEME (403 Forbidden)
+        if (response.status === 403) {
+            console.warn(`[SHIELD] Traffic blocked for FP: ${device_id}`);
             return new Response(
                 `
-                <div style="background:#030712; color:#ef4444; font-family:sans-serif; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; border: 5px solid #ef4444;">
-                    <h1 style="font-size:60px; margin-bottom:10px;">🔴 ACCESS DENIED</h1>
-                    <p style="font-size:24px; color:#94a3b8; max-width:600px;">Your IP address (${ip}) has been blacklisted by <strong>FlowHive Nexus SOC</strong> for suspicious activity.</p>
-                    <div style="margin-top:30px; padding:15px; border:1px solid #ef4444; color:#ef4444; font-family:monospace; background:rgba(239,68,68,0.1);">
-                        THREAT_DETECTED: ${detected_threat}<br>
-                        DEVICE_ID: ${device_id}
-                    </div>
-                </div>
+                <!DOCTYPE html>
+                <html><head><title>Access Denied | FlowHive</title>
+                <style>body{background:#0a0a0a;color:#ef4444;font-family:monospace;padding:50px;text-align:center;} .box{border:1px solid #ef4444;padding:20px;display:inline-block;background:#170505;} h1{font-size:3rem;margin:0;}</style>
+                </head><body>
+                <div class="box">
+                    <h1>ERROR 403: ACCESS DENIED</h1>
+                    <p>Your request was blocked by FlowHive Web Application Firewall.</p>
+                    <p>Reference ID: <b>${device_id}</b></p>
+                    <p>IP Address: ${ip}</p>
+                </div></body></html>
                 `, 
                 { status: 403, headers: { 'content-type': 'text/html; charset=UTF-8' } }
             );
         }
-        // Banlı değilse, normal site akışına devam et
-        return new Response(null, { headers: { 'x-middleware-next': '1' } });
-    })
-    .catch(err => {
-        // Ngrok kapalıysa siteyi aç (hata toleransı), sadece konsola yaz
-        console.error("SOC Bağlantı Hatası:", err.message);
-        return new Response(null, { headers: { 'x-middleware-next': '1' } });
-    });
+    } catch (err) {
+        console.error("SOC İletişim Hatası:", err.message);
+    }
+
+    return new Response(null, { headers: { 'x-middleware-next': '1' } });
 }
 
-// Tüm alt dizinleri (api, login, admin vb.) koruma altına al
-export const config = {
-    matcher: '/:path*',
-};
+export const config = { matcher: '/:path*' };
