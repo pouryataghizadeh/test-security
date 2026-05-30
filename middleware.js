@@ -1,116 +1,100 @@
 /**
- * FLOWHIVE NEXUS — ADVANCED EDGE SHIELD v3.5
+ * FLOWHIVE NEXUS — ADVANCED EDGE SHIELD v4.0
  * ==========================================
- * Özellikler:
- * - Asenkron Tehdit Raporlama (Kullanıcıyı yavaşlatmaz)
- * - SubtleCrypto ile Deterministik Cihaz Parmak İzi (Fingerprinting)
- * - Dual-Stack Ban Kontrolü (Hem IP hem Cihaz Kimliği)
- * - Yerel Hafıza Caching (Banlanan IP'leri Edge üzerinde tutar)
+ * - Supabase Direct Edge Query (Ultra-Fast Ban Checking)
+ * - TLS & Network Level Fingerprinting Simulation
+ * - Fail-Open Resilience Architecture
  */
 
 import { NextResponse } from "next/server";
 
 // ─── YAPILANDIRMA ─────────────────────────────────────────────────────────────
-// Ngrok veya Sunucu adresini buraya yaz (Sonunda / olmasın)
-const SOC_API_BASE = "https://davida-unslain-allen.ngrok-free.dev";
+const SOC_API_BASE = "http://localhost:8000"; // Python API (Eğer ngrok kullanıyorsan değiştir)
+const SUPABASE_URL = "https://qipykhxrdwuijxolzcwd.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpcHlraHhyZHd1aWp4b2x6Y3dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxMTMzMTAsImV4cCI6MjA5NTY4OTMxMH0.9cnkPBbQEIa8Bz8Czq2RafCufG5vXtARvhVAQBZkCJk";
 
-/** SOC yükünü azaltmak için bu yollar middleware tarafından taranmaz */
-const BYPASS_ROUTES = [
-  "/_next/static", "/_next/image", "/favicon.ico", "/robots.txt", "/sitemap.xml",
-];
-
-/** Vercel Edge Hafızası (Saldırganları geçici olarak RAM'de tutar) */
+const BYPASS_ROUTES = ["/_next/static", "/_next/image", "/favicon.ico", "/robots.txt"];
 const _edgeBlockCache = new Map();
 
-// ─── TEHDİT ANALİZ MOTORU (WAF) ────────────────────────────────────────────────
-function classifyThreat(req) {
+// ─── TEHDİT ANALİZ MOTORU (WAF - Edge Level) ──────────────────────────────────
+function classifyEdgeThreat(req) {
   const url = new URL(req.url);
   const path = url.pathname.toLowerCase();
   const query = url.search.toLowerCase();
   const ua = (req.headers.get("user-agent") || "").toLowerCase();
 
-  // SQL Injection Koruması
-  if (/(%27)|(\')|(--)|(%23)|(#)|(\bselect\b|\bunion\b|\bdrop\b)/i.test(query)) {
-    return { type: "SQL Injection", confidence: 0.96 };
-  }
+  if (/(%27)|(\')|(--)|(%23)|(#)|(\bselect\b|\bunion\b|\bdrop\b)/i.test(query)) return { type: "SQL Injection", conf: 0.96 };
+  if (/(<script|javascript:|onerror=|onload=|alert\(|document\.cookie)/i.test(query)) return { type: "XSS", conf: 0.94 };
+  if (req.method === "POST" && /\/(login|auth|admin|signin)/.test(path)) return { type: "Brute Force", conf: 0.85 };
+  if (/(nikto|sqlmap|nmap|burp|dirbuster|gobuster)/i.test(ua)) return { type: "Vulnerability Scanner", conf: 0.99 };
 
-  // XSS Koruması
-  if (/(<script|javascript:|onerror=|onload=|alert\(|document\.cookie)/i.test(query)) {
-    return { type: "Cross-Site Scripting (XSS)", confidence: 0.94 };
-  }
-
-  // Brute Force (Giriş denemeleri)
-  if (req.method === "POST" && /\/(login|auth|admin|signin)/.test(path)) {
-    return { type: "Brute Force Attempt", confidence: 0.85 };
-  }
-
-  // Bot & Scanner Tespiti
-  if (/(nikto|sqlmap|nmap|burp|dirbuster|gobuster|python-requests)/i.test(ua)) {
-    return { type: "Vulnerability Scanner", confidence: 0.99 };
-  }
-
-  return { type: "BENIGN", confidence: 0.0 };
+  return { type: "BENIGN", conf: 0.0 };
 }
 
-// ─── CİHAZ PARMAK İZİ OLUŞTURUCU ───────────────────────────────────────────────
-async function getDeviceID(ip, req) {
+// ─── GELİŞMİŞ PARMAK İZİ (FINGERPRINTING) ─────────────────────────────────────
+async function generateAdvancedFingerprint(req, ip) {
   const ua = req.headers.get("user-agent") || "";
   const lang = req.headers.get("accept-language") || "";
-  const raw = `${ip}|${ua}|${lang}`;
+  // Edge Header'ları ile Cihazı Kesinleştirme (Vercel/Cloudflare özel başlıkları)
+  const secChUa = req.headers.get("sec-ch-ua") || "";
+  const secChPlatform = req.headers.get("sec-ch-ua-platform") || "";
+  
+  const rawFingerprint = `${ip}|${ua}|${lang}|${secChUa}|${secChPlatform}`;
 
-  const encoded = new TextEncoder().encode(raw);
+  const encoded = new TextEncoder().encode(rawFingerprint);
   const hashBuf = await crypto.subtle.digest("SHA-256", encoded);
   const hashArr = Array.from(new Uint8Array(hashBuf));
   const hex = hashArr.map((b) => b.toString(16).padStart(2, "0")).join("");
-  return `DEV-${hex.slice(0, 16).toUpperCase()}`;
+  
+  return `FH-DEV-${hex.slice(0, 16).toUpperCase()}`;
 }
 
 // ─── ANA MIDDLEWARE ────────────────────────────────────────────────────────────
 export async function middleware(req, event) {
   const url = new URL(req.url);
 
-  // 1. Statik dosyaları atla
-  if (BYPASS_ROUTES.some((p) => url.pathname.startsWith(p))) {
-    return NextResponse.next();
-  }
+  if (BYPASS_ROUTES.some((p) => url.pathname.startsWith(p))) return NextResponse.next();
 
+  // Gerçek IP'yi al (Proxy arkasındaysa X-Forwarded-For)
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "127.0.0.1";
-  const deviceId = await getDeviceID(ip, req);
+  const deviceId = await generateAdvancedFingerprint(req, ip);
 
-  // 2. Yerel Hafıza (Edge Cache) Kontrolü
-  // Eğer bu IP son 1 saat içinde 403 aldıysa, Python'a sormadan direk engelle
+  // 1. Önce RAM'deki Edge Cache'e bak (Ultra hızlı)
   if (_edgeBlockCache.has(ip) && _edgeBlockCache.get(ip) > Date.now()) {
     return blockedResponse(ip, deviceId);
   }
 
+  // 2. Supabase'den Doğrudan Ban Kontrolü (Python API'sini beklemeden)
   try {
-    // 3. SOC Merkezine Ban Kontrolü Sor (Dual Control: IP + DeviceID)
     const checkController = new AbortController();
-    const timeoutId = setTimeout(() => checkController.abort(), 600); // 600ms içinde cevap gelmezse sal gitsin (Fail-Open)
+    const timeoutId = setTimeout(() => checkController.abort(), 800); // Fail-Open: 800ms'de cevap gelmezse geçmesine izin ver
     
-    const checkRes = await fetch(`${SOC_API_BASE}/api/check-ip/${ip}?device_id=${deviceId}`, {
+    // REST API kullanarak Supabase'i sorgula
+    const supaRes = await fetch(`${SUPABASE_URL}/rest/v1/banned_ips?ip=eq.${ip}&select=ip`, {
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`
+      },
       signal: checkController.signal
     });
     clearTimeout(timeoutId);
     
-    const status = await checkRes.json();
-
-    if (status.status === "banned") {
-      // Edge hafızasına al (1 saat boyunca bir daha sorma)
+    const data = await supaRes.json();
+    if (data && data.length > 0) {
+      // Adam gerçekten banlıymış. RAM Cache'e 1 saatliğine ekle.
       _edgeBlockCache.set(ip, Date.now() + 3600000);
       return blockedResponse(ip, deviceId);
     }
-
   } catch (err) {
-    console.warn("[FlowHive] SOC Offline, bypassing check...");
+    // Supabase yanıt vermezse trafiği kesme (Kullanıcı deneyimini koru)
+    console.warn("[FlowHive] Supabase Edge Check Timeout, bypassing...");
   }
 
-  // 4. Tehdit Sınıflandırması
-  const threat = classifyThreat(req);
+  // 3. Edge WAF Tehdit Sınıflandırması
+  const threat = classifyEdgeThreat(req);
 
-  // 5. Arka Planda Raporlama (BEKLEMESİZ)
-  // Sadece şüpheli hareketleri (BENIGN olmayan) raporla
   if (threat.type !== "BENIGN") {
+    // Tehditi arka planda (kullanıcıyı bekletmeden) Python API'sine gönder
     event.waitUntil(
       fetch(`${SOC_API_BASE}/api/trigger-alert`, {
         method: "POST",
@@ -119,20 +103,18 @@ export async function middleware(req, event) {
           source_ip: ip,
           destination_ip: req.headers.get("host") || "Vercel_Edge",
           threat_type: threat.type,
-          confidence: threat.confidence,
+          confidence: threat.conf,
           device_id: deviceId
         })
-      }).then(res => {
-        // Eğer raporlama sırasında backend "bu adam aslında banlıymış" derse hafızaya ekle
-        if (res.status === 403) _edgeBlockCache.set(ip, Date.now() + 3600000);
       }).catch(() => {})
     );
   }
 
-  // 6. Güvenli başlıklarla siteyi aç
   const response = NextResponse.next();
-  response.headers.set("X-FlowHive-Inspected", "true");
-  response.headers.set("X-FlowHive-Device", deviceId);
+  // Savunma Katmanı Başlıkları (Security Headers)
+  response.headers.set("X-FlowHive-WAF", "Active");
+  response.headers.set("X-Device-Trace", deviceId);
+  response.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-Content-Type-Options", "nosniff");
   
@@ -142,11 +124,12 @@ export async function middleware(req, event) {
 // ─── ENGELLEME EKRANI ─────────────────────────────────────────────────────────
 function blockedResponse(ip, deviceId) {
   const html = `
-    <div style="background:#030712; color:#ef4444; height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; font-family:monospace; text-align:center; padding:20px;">
-        <h1 style="font-size:60px; margin:0;">403</h1>
-        <h2 style="letter-spacing:5px; border:1px solid #ef4444; padding:10px;">ACCESS DENIED</h2>
-        <p style="color:#94a3b8; font-size:18px; margin-top:20px;">Your IP (${ip}) or Device ID has been blacklisted by <b>FlowHive SOC</b>.</p>
-        <div style="margin-top:40px; color:#475569; font-size:12px;">Ref ID: ${deviceId}</div>
+    <div style="background:#030712; color:#ef4444; height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; font-family:'Fira Code', monospace; text-align:center; padding:20px;">
+        <svg style="width:100px; height:100px; margin-bottom:20px; opacity:0.8;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z"></path></svg>
+        <h1 style="font-size:64px; margin:0; text-shadow: 0 0 20px rgba(239,68,68,0.5);">403</h1>
+        <h2 style="letter-spacing:8px; border:1px solid #ef4444; padding:15px 30px; margin:20px 0; background: rgba(239,68,68,0.1);">ACCESS DENIED</h2>
+        <p style="color:#94a3b8; font-size:16px; max-width: 600px; line-height:1.6;">Connection isolated. The source IP address <b>${ip}</b> has triggered critical security protocols and is restricted by FlowHive Active Defense.</p>
+        <div style="margin-top:40px; color:#475569; font-size:12px; border-top: 1px solid #1e293b; padding-top: 20px;">Trace ID: ${deviceId}</div>
     </div>`;
 
   return new NextResponse(html, {
@@ -155,7 +138,6 @@ function blockedResponse(ip, deviceId) {
   });
 }
 
-// ─── MATCHER ──────────────────────────────────────────────────────────────────
 export const config = {
   matcher: "/((?!api|_next/static|_next/image|favicon.ico).*)",
 };
